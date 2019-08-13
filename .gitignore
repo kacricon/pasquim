@@ -1,6 +1,10 @@
-# cache files
+# cache and temp files
 .pytest_cache
 __pycache__
+tmp
 
 # ide files
 .vscode
+
+# os specific
+.DS_Store
