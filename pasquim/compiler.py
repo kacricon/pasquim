@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 
+from pasquim.datatypes import immediate_rep
+from pasquim.parser import Lexer, Parser
+
 
 class Compiler:
     """A Scheme compiler written in pure python.
@@ -14,7 +17,9 @@ class Compiler:
     """
     def __init__(self, path: str, program: str) -> None:
         self.path = self._prep_output(path)
-        self.program = program
+        parser = Parser(Lexer(program).tokenize())
+        self.program = parser.parse()
+
         self.asm_program = ""
 
     @staticmethod
@@ -31,9 +36,11 @@ class Compiler:
 
     def compile_expr(self, expr):
         """Compiles a single passed expression."""
+        expr = immediate_rep(expr)
         self.emit(f"movl ${expr}, %eax")
 
     def compile_program(self) -> None:
+        """Compiles Scheme program to Assembly."""
         self.asm_program = ""  # reset
 
         self.emit(".text")
