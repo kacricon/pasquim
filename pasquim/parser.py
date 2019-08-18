@@ -1,7 +1,8 @@
 from typing import List, Union
 import re
 
-from pasquim.types import Exp
+# A Scheme expression, which can be an Atom or List
+Exp = Union[str, int, float, list]
 
 
 class Lexer:
