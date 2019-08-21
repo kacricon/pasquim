@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from pasquim.datatypes import immediate_rep
+from pasquim.primitives import immediate_rep
 
 
 class TestRepresentation(TestCase):

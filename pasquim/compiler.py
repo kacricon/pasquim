@@ -2,9 +2,8 @@ from typing import Any
 import os
 from pathlib import Path
 
-from pasquim.datatypes import immediate_rep
 from pasquim.parser import Lexer, Parser
-from pasquim.primitives import primitives
+from pasquim.primitives import immediate_rep, primitives
 
 
 class Compiler:
