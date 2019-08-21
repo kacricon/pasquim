@@ -4,8 +4,10 @@ from typing import Union, Iterable
 import math
 import operator as op
 
-from pasquim.types import List, Number, Symbol, Exp
-import pasquim.parser as parser
+from pasquim.parser import Lexer, Parser
+
+# A Scheme expression, which can be an Atom or List
+Exp = Union[str, int, float, list]
 
 
 class Env(dict):
@@ -54,18 +56,18 @@ def standard_env() -> Env:
         'expt': pow,
         'equal?': op.eq,
         'length': len,
-        'list': lambda *x: List(x),
-        'list?': lambda x: isinstance(x, List),
+        'list': lambda *x: list(x),
+        'list?': lambda x: isinstance(x, list),
         'map': map,
         'max': max,
         'min': min,
         'not': op.not_,
         'null?': lambda x: x == [],
-        'number?': lambda x: isinstance(x, Number),
+        'number?': lambda x: isinstance(x, (float, int)),
         'print': print,
         'procedure?': callable,
         'round': round,
-        'symbol?': lambda x: isinstance(x, Symbol),
+        'symbol?': lambda x: isinstance(x, str),
     })
 
     return env
@@ -73,9 +75,9 @@ def standard_env() -> Env:
 
 def eval(x: Exp, env: Env = standard_env()) -> Union[Exp, Procedure, None]:
     """Evaluates an expression in an environment."""
-    if isinstance(x, Symbol):             # variable reference
+    if isinstance(x, str):             # variable reference
         return env.find(x)[x]
-    elif not isinstance(x, List):         # constant
+    elif not isinstance(x, list):         # constant
         return x
 
     op, *args = x
@@ -103,14 +105,14 @@ def eval(x: Exp, env: Env = standard_env()) -> Union[Exp, Procedure, None]:
 def repl(prompt: str = 'pasquim> ') -> None:
     """A prompt-read-eval-print loop."""
     while True:
-        val = eval(parser.parse(input(prompt)))
+        val = eval(Parser(Lexer(input(prompt)).tokenize()).parse())
         if val is not None:
             print(schemestr(val))
 
 
 def schemestr(exp) -> str:
     """Converts a Python object back into a Scheme-readable string."""
-    if isinstance(exp, List):
+    if isinstance(exp, list):
         return '(' + ' '.join(map(schemestr, exp)) + ')'
     else:
         return str(exp)
