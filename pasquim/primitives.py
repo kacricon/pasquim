@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 
 
 """
@@ -54,6 +54,39 @@ def immediate_rep(x):
         NotImplemented
 
 
+def compile_expr(expr: Any) -> List[str]:
+    if is_immediate(expr):
+        expr = immediate_rep(expr)
+        return [f"movl ${expr}, %eax"]
+    elif is_primitive_call(expr):
+        expr.pop(0)
+        primcall_op = expr.pop(0)
+        primcall_args = expr
+
+        return primitives.get(primcall_op)(primcall_args)
+    else:
+        raise ValueError(f"Unrecognized expression {str(expr)}")
+
+
+def is_immediate(x: Any) -> bool:
+    """Checks if x is an immediate value.
+
+    Immediate values can be an integer, boolean, character or null.
+    """
+    return isinstance(x, int) or\
+        (isinstance(x, str) and len(x) == 1) or\
+        x is None
+
+
+def is_primitive_call(x: Any) -> bool:
+    """Checks if x is a primitive call.
+
+    Args:
+        x ([type]): [description]
+    """
+    return isinstance(x, list) and len(x) > 1 and x[0] == 'primcall'
+
+
 """
 Primitive operators.
 
@@ -77,25 +110,80 @@ def add1(args: list) -> List[str]:
     """Adds 1 to a number."""
     _check_unary_args(args, 'add1')
 
-    instructions = [
+    return [
         f"movl ${immediate_rep(args[0])}, %eax",
         f"addl ${immediate_rep(1)}, %eax"
     ]
-    return instructions
 
 
 def sub1(args: list) -> List[str]:
     """Subtracts 1 to a number."""
     _check_unary_args(args, 'sub1')
 
-    instructions = [
+    return [
         f"movl ${immediate_rep(args[0])}, %eax",
         f"subl ${immediate_rep(1)}, %eax"
     ]
-    return instructions
+
+
+def _is_eax_equal_to(val: Any) -> List[str]:
+    return [
+        f"cmpl ${val}, %eax",         # check eax against val
+        f"movl $0, %eax",             # zero eac, leaving equal flag in place
+        f"sete %al",                  # set low bit of eax if they were equal
+        f"sall ${bool_shift}, %eax",  # shift the bit up to the bool position
+        f"orl ${bool_tag}, %eax"      # add boolean type tag
+    ]
+
+
+def is_integer(args: list) -> List[str]:
+    """Checks if value is an integer."""
+    _check_unary_args(args, 'integer?')
+
+    return (
+        compile_expr(args[0]) +
+        [f"andl ${fixnum_mask}, %eax"] +
+        _is_eax_equal_to(0)
+    )
+
+
+def is_zero(args: list) -> List[str]:
+    """Checks if value is the integer zero."""
+    _check_unary_args(args, 'zero?')
+
+    return (
+        compile_expr(args[0]) +
+        _is_eax_equal_to(0)
+    )
+
+
+def is_boolean(args: list) -> List[str]:
+    """Checks if value is a boolean."""
+    _check_unary_args(args, 'boolean?')
+
+    return (
+        compile_expr(args[0]) +
+        [f"andl ${bool_mask}, %eax"] +
+        _is_eax_equal_to(bool_tag)
+    )
+
+
+def is_char(args: list) -> List[str]:
+    """Checks if value is a char."""
+    _check_unary_args(args, 'char?')
+
+    return (
+        compile_expr(args[0]) +
+        [f"andl ${char_mask}, %eax"] +
+        _is_eax_equal_to(char_tag)
+    )
 
 
 primitives = {
     'add1': add1,
-    'sub1': sub1
+    'sub1': sub1,
+    'integer?': is_integer,
+    'zero?': is_zero,
+    'boolean?': is_boolean,
+    'char?': is_char
 }

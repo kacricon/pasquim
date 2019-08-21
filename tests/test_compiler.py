@@ -56,3 +56,43 @@ class TestPrimitives(TestCase):
     def test_sub1_invalid_args(self):
         _check_exception("(primcall sub1)", ValueError)
         _check_exception("(primcall sub1 1 2)", ValueError)
+
+    def test_is_integer(self):
+        _compile_and_compare("(primcall integer? 10)", "#t")
+        _compile_and_compare("(primcall integer? -42)", "#t")
+        _compile_and_compare("(primcall integer? #t)", "#f")
+        _compile_and_compare("(primcall integer? a)", "#f")
+
+    def test_is_integer_invalid_args(self):
+        _check_exception("(primcall integer?)", ValueError)
+        _check_exception("(primcall integer? 1 2)", ValueError)
+
+    def test_is_zero(self):
+        _compile_and_compare("(primcall zero? 0)", "#t")
+        _compile_and_compare("(primcall zero? -42)", "#f")
+        _compile_and_compare("(primcall zero? #t)", "#f")
+        _compile_and_compare("(primcall zero? a)", "#f")
+
+    def test_is_zero_invalid_args(self):
+        _check_exception("(primcall zero?)", ValueError)
+        _check_exception("(primcall zero? 1 2)", ValueError)
+
+    def test_is_boolean(self):
+        _compile_and_compare("(primcall boolean? 10)", "#f")
+        _compile_and_compare("(primcall boolean? -42)", "#f")
+        _compile_and_compare("(primcall boolean? #t)", "#t")
+        _compile_and_compare("(primcall boolean? a)", "#f")
+
+    def test_is_boolean_invalid_args(self):
+        _check_exception("(primcall boolean?)", ValueError)
+        _check_exception("(primcall boolean? 1 2)", ValueError)
+
+    def test_is_char(self):
+        _compile_and_compare("(primcall char? 10)", "#f")
+        _compile_and_compare("(primcall char? -42)", "#f")
+        _compile_and_compare("(primcall char? #t)", "#f")
+        _compile_and_compare("(primcall char? a)", "#t")
+
+    def test_is_char_invalid_args(self):
+        _check_exception("(primcall char?)", ValueError)
+        _check_exception("(primcall char? 1 2)", ValueError)
