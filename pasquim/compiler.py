@@ -1,9 +1,12 @@
-from typing import Any
+from typing import Union
 import os
 from pathlib import Path
 
 from pasquim.parser import Lexer, Parser
 from pasquim.primitives import compile_expr, wordsize
+
+# A Scheme expression, which can be an Atom or List
+Exp = Union[str, int, float, list]
 
 
 class Compiler:
@@ -35,7 +38,7 @@ class Compiler:
         """Adds a line to the assembly program."""
         self.asm_program += line + "\n"
 
-    def _emit_expr(self, expr) -> None:
+    def _emit_expr(self, expr: Exp) -> None:
         """Compiles a single passed expression."""
 
         for i in compile_expr(expr, -wordsize):
