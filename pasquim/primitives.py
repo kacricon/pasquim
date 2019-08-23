@@ -16,6 +16,7 @@ type      | 31            bit             0
 closure pointer | pppppppppppppppppppppppppppp110
 """
 
+wordsize = 4  # number of bytes used for each word
 
 # integer
 fixnum_shift = 2
@@ -42,19 +43,19 @@ sym_tag = 5
 closure_tag = 6
 
 
-def immediate_rep(x):
+def immediate_rep(expr: Any):
     """Converts a Python object to its 32-bit word representation."""
-    if isinstance(x, bool):
-        return (1 << bool_shift) | bool_tag if x else bool_tag
-    elif isinstance(x, int):
-        return x << fixnum_shift
-    elif isinstance(x, str) and len(x) == 1:
-        return (ord(x) << char_shift) | char_tag
+    if isinstance(expr, bool):
+        return (1 << bool_shift) | bool_tag if expr else bool_tag
+    elif isinstance(expr, int):
+        return expr << fixnum_shift
+    elif isinstance(expr, str) and len(expr) == 1:
+        return (ord(expr) << char_shift) | char_tag
     else:
         NotImplemented
 
 
-def compile_expr(expr: Any) -> List[str]:
+def compile_expr(expr: Any, si: int) -> List[str]:
     if is_immediate(expr):
         expr = immediate_rep(expr)
         return [f"movl ${expr}, %eax"]
@@ -63,28 +64,24 @@ def compile_expr(expr: Any) -> List[str]:
         primcall_op = expr.pop(0)
         primcall_args = expr
 
-        return primitives.get(primcall_op)(primcall_args)
+        return primitive_ops.get(primcall_op)(primcall_args, si)
     else:
         raise ValueError(f"Unrecognized expression {str(expr)}")
 
 
-def is_immediate(x: Any) -> bool:
-    """Checks if x is an immediate value.
+def is_immediate(expr: Any) -> bool:
+    """Checks if expr is an immediate value.
 
     Immediate values can be an integer, boolean, character or null.
     """
-    return isinstance(x, int) or\
-        (isinstance(x, str) and len(x) == 1) or\
-        x is None
+    return (isinstance(expr, int) or
+            (isinstance(expr, str) and len(expr) == 1) or
+            expr is None)
 
 
-def is_primitive_call(x: Any) -> bool:
-    """Checks if x is a primitive call.
-
-    Args:
-        x ([type]): [description]
-    """
-    return isinstance(x, list) and len(x) > 1 and x[0] == 'primcall'
+def is_primitive_call(expr: Any) -> bool:
+    """Checks if expr is a primitive call."""
+    return isinstance(expr, list) and len(expr) > 1 and expr[0] == 'primcall'
 
 
 """
@@ -106,22 +103,20 @@ def _check_unary_args(args: list, op_name: str) -> None:
         raise ValueError("A single argument should be passed to {op_name}.")
 
 
-def add1(args: list) -> List[str]:
+def add1(args: list, si: int) -> List[str]:
     """Adds 1 to a number."""
     _check_unary_args(args, 'add1')
 
-    return [
-        f"movl ${immediate_rep(args[0])}, %eax",
+    return compile_expr(args[0], si) + [
         f"addl ${immediate_rep(1)}, %eax"
     ]
 
 
-def sub1(args: list) -> List[str]:
+def sub1(args: list, si: int) -> List[str]:
     """Subtracts 1 to a number."""
     _check_unary_args(args, 'sub1')
 
-    return [
-        f"movl ${immediate_rep(args[0])}, %eax",
+    return compile_expr(args[0], si) + [
         f"subl ${immediate_rep(1)}, %eax"
     ]
 
@@ -136,54 +131,141 @@ def _is_eax_equal_to(val: Any) -> List[str]:
     ]
 
 
-def is_integer(args: list) -> List[str]:
+def is_integer(args: list, si: int) -> List[str]:
     """Checks if value is an integer."""
     _check_unary_args(args, 'integer?')
 
     return (
-        compile_expr(args[0]) +
+        compile_expr(args[0], si) +
         [f"andl ${fixnum_mask}, %eax"] +
         _is_eax_equal_to(0)
     )
 
 
-def is_zero(args: list) -> List[str]:
+def is_zero(args: list, si: int) -> List[str]:
     """Checks if value is the integer zero."""
     _check_unary_args(args, 'zero?')
 
     return (
-        compile_expr(args[0]) +
+        compile_expr(args[0], si) +
         _is_eax_equal_to(0)
     )
 
 
-def is_boolean(args: list) -> List[str]:
+def is_boolean(args: list, si: int) -> List[str]:
     """Checks if value is a boolean."""
     _check_unary_args(args, 'boolean?')
 
     return (
-        compile_expr(args[0]) +
+        compile_expr(args[0], si) +
         [f"andl ${bool_mask}, %eax"] +
         _is_eax_equal_to(bool_tag)
     )
 
 
-def is_char(args: list) -> List[str]:
+def is_char(args: list, si: int) -> List[str]:
     """Checks if value is a char."""
     _check_unary_args(args, 'char?')
 
     return (
-        compile_expr(args[0]) +
+        compile_expr(args[0], si) +
         [f"andl ${char_mask}, %eax"] +
         _is_eax_equal_to(char_tag)
     )
 
 
-primitives = {
+# binary operators
+def add(args: list, si: int) -> List[str]:
+    """Adds two numbers and returns results."""
+
+    return (
+        compile_expr(args[0], si) +
+        [f"movl %eax, {si}(%esp)"] +
+        compile_expr(args[1], si - wordsize) +
+        [f"addl {si}(%esp), %eax"]
+    )
+
+
+def sub(args: list, si: int) -> List[str]:
+    """Subtracts two numbers and returns results."""
+
+    return (
+        compile_expr(args[1], si) +
+        [f"movl %eax, {si}(%esp)"] +
+        compile_expr(args[0], si - wordsize) +
+        [f"subl {si}(%esp), %eax"]
+    )
+
+
+def mul(args: list, si: int) -> List[str]:
+    """Multiplies two numbers and returns results."""
+
+    return (
+        compile_expr(args[0], si) +
+        [f"movl %eax, {si}(%esp)"] +
+        compile_expr(args[1], si - wordsize) +
+        [f"shrl ${fixnum_shift}, %eax",
+         f"imull {si}(%esp), %eax"]
+    )
+
+
+def equal(args: list, si: int) -> List[str]:
+    """Checks for equality between two numbers."""
+    return (
+        compile_expr(args[0], si) +
+        [f"movl %eax, {si}(%esp)"] +
+        compile_expr(args[1], si - wordsize) +
+        [f"cmpl %eax, {si}(%esp)",
+         f"movl $0, %eax",
+         f"sete %al",
+         f"sall ${bool_shift}, %eax",
+         f"orl ${bool_tag}, %eax"]
+    )
+
+
+def less_than(args: list, si: int) -> List[str]:
+    """Checks if a number is less than another."""
+    return (
+        compile_expr(args[0], si) +
+        [f"movl %eax, {si}(%esp)"] +
+        compile_expr(args[1], si - wordsize) +
+        [f"cmpl %eax, {si}(%esp)",
+         f"movl $0, %eax",
+         f"setl %al",
+         f"sall ${bool_shift}, %eax",
+         f"orl ${bool_tag}, %eax"]
+    )
+
+
+def char_equal(args: list, si: int) -> List[str]:
+    """Checks for equality between two chars."""
+    return (
+        compile_expr(args[0], si) +
+        [f"shrl ${char_shift}, %eax"] +
+        [f"movl %eax, {si}(%esp)"] +
+        compile_expr(args[1], si - wordsize) +
+        [f"shrl ${char_shift}, %eax"] +
+        [f"cmpl %eax, {si}(%esp)",
+         f"movl $0, %eax",
+         f"sete %al",
+         f"sall ${bool_shift}, %eax",
+         f"orl ${bool_tag}, %eax"]
+    )
+
+
+primitive_ops = {
+    # unary
     'add1': add1,
     'sub1': sub1,
     'integer?': is_integer,
     'zero?': is_zero,
     'boolean?': is_boolean,
-    'char?': is_char
+    'char?': is_char,
+    # binary
+    '+': add,
+    '-': sub,
+    '*': mul,
+    '=': equal,
+    '<': less_than,
+    'char=?': char_equal
 }

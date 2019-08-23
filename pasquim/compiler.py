@@ -3,11 +3,11 @@ import os
 from pathlib import Path
 
 from pasquim.parser import Lexer, Parser
-from pasquim.primitives import compile_expr
+from pasquim.primitives import compile_expr, wordsize
 
 
 class Compiler:
-    """A Scheme compiler written in pure python.
+    """A Scheme compiler.
 
     Translates a Scheme program into Assembly, then generates an executable
     binary.
@@ -38,7 +38,7 @@ class Compiler:
     def _emit_expr(self, expr) -> None:
         """Compiles a single passed expression."""
 
-        for i in compile_expr(expr):
+        for i in compile_expr(expr, -wordsize):
             self._emit(i)
 
     def compile_program(self) -> None:

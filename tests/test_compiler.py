@@ -6,7 +6,7 @@ from subprocess import run, PIPE
 
 from pasquim.compiler import Compiler
 
-TEMP_FOLDER = "tests/tmp"
+TEMP_FOLDER = "tmp"
 
 
 def _compile_and_compare(program: str, output: str) -> None:
@@ -38,7 +38,7 @@ class TestAtoms(TestCase):
         _compile_and_compare("#f", "#f")
 
 
-class TestPrimitives(TestCase):
+class TestUnaryPrimitives(TestCase):
     def test_add1_to_zero(self):
         _compile_and_compare("(primcall add1 0)", "1")
         _compile_and_compare("(primcall add1 41)", "42")
@@ -96,3 +96,35 @@ class TestPrimitives(TestCase):
     def test_is_char_invalid_args(self):
         _check_exception("(primcall char?)", ValueError)
         _check_exception("(primcall char? 1 2)", ValueError)
+
+
+class TestBinaryPrimitives(TestCase):
+    def test_add(self):
+        _compile_and_compare("(primcall + 0 10)", "10")
+        _compile_and_compare("(primcall + 41 1)", "42")
+        _compile_and_compare("(primcall + 42 -84 )", "-42")
+
+    def test_sub(self):
+        _compile_and_compare("(primcall - 0 10)", "-10")
+        _compile_and_compare("(primcall - 43 1)", "42")
+        _compile_and_compare("(primcall - 42 84 )", "-42")
+
+    def test_mul(self):
+        _compile_and_compare("(primcall * 0 10)", "0")
+        _compile_and_compare("(primcall * 42 1)", "42")
+        _compile_and_compare("(primcall * -42 -1 )", "42")
+        _compile_and_compare("(primcall * 10 13 )", "130")
+
+    def test_equal(self):
+        _compile_and_compare("(primcall = -10 10)", "#f")
+        _compile_and_compare("(primcall = 0 10)", "#f")
+        _compile_and_compare("(primcall = 42 42)", "#t")
+
+    def test_less_than(self):
+        _compile_and_compare("(primcall < -10 10)", "#t")
+        _compile_and_compare("(primcall < 10 10)", "#f")
+        _compile_and_compare("(primcall < 43 42)", "#f")
+
+    def test_equal_char(self):
+        _compile_and_compare("(primcall char=? a a)", "#t")
+        _compile_and_compare("(primcall char=? a z)", "#f")
