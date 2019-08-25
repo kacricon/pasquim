@@ -68,6 +68,7 @@ class Compiler:
         self._emit("ret")
 
     def compile_to_binary(self) -> None:
+        """Compiles program and generates binary."""
         self.compile_program()
 
         compiled_path = self.path.joinpath("compiled.s")
