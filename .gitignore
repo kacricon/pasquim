@@ -1,4 +1,5 @@
 # cache and temp files
+.hypothesis
 .pytest_cache
 __pycache__
 tmp

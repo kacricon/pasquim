@@ -1,1 +1,4 @@
-pytest
+# dev tools
+flake8
+pytest>=5.1
+hypothesis>=4.35

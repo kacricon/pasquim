@@ -4,7 +4,7 @@ from typing import Any, List
 """
 Primitive data types, represented by 32-bit words using tagged pointers.
 
-type      | 31            bit             0
+type            | 31            bit             0
 -------------------------------------------------
         integer | iiiiiiiiiiiiiiiiiiiiiiiiiiiii00
         boolean | 0000000000000000000000b00001111
@@ -75,8 +75,8 @@ def is_immediate(expr: Any) -> bool:
     Immediate values can be an integer, boolean, character or null.
     """
     return (isinstance(expr, int) or
-            (isinstance(expr, str) and len(expr) == 1) or
-            expr is None)
+           (isinstance(expr, str) and len(expr) == 1) or
+           expr is None)
 
 
 def is_primitive_call(expr: Any) -> bool:
